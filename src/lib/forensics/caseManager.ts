@@ -3,7 +3,7 @@
  * Manages forensic case creation and storage
  */
 
-import { ForensicCase, LogEntry, TimelineEvent, RiskAnalysis, IncidentClassification } from './types';
+import { ForensicCase, LogEntry, TimelineEvent, RiskAnalysis, IncidentClassification, InvestigatorDetails } from './types';
 import { calculateSHA256 } from './hashIntegrity';
 import { parseLogFile } from './logParser';
 import { buildTimeline, filterSignificantEvents } from './timelineBuilder';
@@ -112,7 +112,8 @@ function generateConclusion(
 
 export async function createForensicCase(
   file: File,
-  content: string
+  content: string,
+  investigatorDetails: InvestigatorDetails
 ): Promise<ForensicCase> {
   // Generate case ID
   const caseId = generateCaseId();
@@ -152,6 +153,7 @@ export async function createForensicCase(
     incidentClassification,
     observations,
     conclusion,
+    investigatorDetails,
   };
   
   return forensicCase;

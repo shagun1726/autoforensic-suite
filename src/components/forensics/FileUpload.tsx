@@ -1,12 +1,15 @@
 import { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, AlertTriangle, Shield, X } from 'lucide-react';
+import { Upload, FileText, AlertTriangle, Shield, X, User, Hash, FileSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { InvestigatorDetails } from '@/lib/forensics/types';
 
 interface FileUploadProps {
-  onFileSelect: (file: File, content: string) => void;
+  onFileSelect: (file: File, content: string, investigatorDetails: InvestigatorDetails) => void;
   isProcessing: boolean;
 }
 
@@ -16,7 +19,13 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
   const [isDragActive, setIsDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileContent, setFileContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Investigator details
+  const [caseNumber, setCaseNumber] = useState('');
+  const [investigatorName, setInvestigatorName] = useState('');
+  const [investigationId, setInvestigationId] = useState('');
 
   const validateFile = (file: File): string | null => {
     const extension = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -45,12 +54,28 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
 
     try {
       const content = await file.text();
-      onFileSelect(file, content);
+      setFileContent(content);
     } catch {
       setError('Failed to read file contents');
       setSelectedFile(null);
+      setFileContent(null);
     }
-  }, [onFileSelect]);
+  }, []);
+
+  const handleStartAnalysis = () => {
+    if (!selectedFile || !fileContent) return;
+    
+    if (!caseNumber.trim() || !investigatorName.trim() || !investigationId.trim()) {
+      setError('Please fill in all investigator details');
+      return;
+    }
+    
+    onFileSelect(selectedFile, fileContent, {
+      caseNumber: caseNumber.trim(),
+      investigatorName: investigatorName.trim(),
+      investigationId: investigationId.trim(),
+    });
+  };
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -81,14 +106,76 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
 
   const clearFile = () => {
     setSelectedFile(null);
+    setFileContent(null);
     setError(null);
   };
 
+  const isFormValid = selectedFile && fileContent && caseNumber.trim() && investigatorName.trim() && investigationId.trim();
+
   return (
     <Card variant="cyber" className="p-1">
+      {/* Investigator Details Section */}
+      <div className="p-4 border-b border-border/50">
+        <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+          <User className="w-4 h-4 text-primary" />
+          Investigation Details
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="caseNumber" className="text-xs text-muted-foreground">
+              Case Number
+            </Label>
+            <div className="relative">
+              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="caseNumber"
+                placeholder="e.g., CASE-2024-001"
+                value={caseNumber}
+                onChange={(e) => setCaseNumber(e.target.value)}
+                className="pl-9 bg-secondary/50 border-border/50"
+                disabled={isProcessing}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="investigatorName" className="text-xs text-muted-foreground">
+              Investigator Name
+            </Label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="investigatorName"
+                placeholder="e.g., John Smith"
+                value={investigatorName}
+                onChange={(e) => setInvestigatorName(e.target.value)}
+                className="pl-9 bg-secondary/50 border-border/50"
+                disabled={isProcessing}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="investigationId" className="text-xs text-muted-foreground">
+              Investigation ID
+            </Label>
+            <div className="relative">
+              <FileSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="investigationId"
+                placeholder="e.g., INV-2024-0042"
+                value={investigationId}
+                onChange={(e) => setInvestigationId(e.target.value)}
+                className="pl-9 bg-secondary/50 border-border/50"
+                disabled={isProcessing}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* File Upload Section */}
       <motion.div
         className={cn(
-          "relative rounded-lg border-2 border-dashed transition-all duration-300 p-8",
+          "relative rounded-lg border-2 border-dashed transition-all duration-300 p-8 m-4",
           isDragActive 
             ? "border-primary bg-primary/10" 
             : "border-border hover:border-primary/50 hover:bg-card/50",
@@ -106,7 +193,7 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
           accept={ALLOWED_EXTENSIONS.join(',')}
           onChange={handleInputChange}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          disabled={isProcessing}
+          disabled={isProcessing || !!selectedFile}
         />
 
         <div className="flex flex-col items-center justify-center space-y-4">
@@ -151,7 +238,7 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
           </div>
 
           {!isProcessing && !selectedFile && (
-            <Button variant="outline" size="sm" className="mt-2">
+            <Button variant="outline" size="sm" className="mt-2 pointer-events-none">
               <FileText className="w-4 h-4 mr-2" />
               Select File
             </Button>
@@ -179,8 +266,8 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={(e) => { e.preventDefault(); clearFile(); }}
-                  className="h-8 w-8"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); clearFile(); }}
+                  className="h-8 w-8 relative z-10"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -203,6 +290,21 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* Start Analysis Button */}
+      {selectedFile && fileContent && !isProcessing && (
+        <div className="p-4 pt-0 flex justify-center">
+          <Button 
+            onClick={handleStartAnalysis}
+            size="lg"
+            disabled={!isFormValid}
+            className="w-full sm:w-auto"
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            Start Forensic Analysis
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

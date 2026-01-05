@@ -42,6 +42,7 @@ export function generateReport(caseData: ForensicCase): ForensicReport {
     observations: caseData.observations,
     conclusion: caseData.conclusion,
     generatedBy: 'AutoForensic - Automated Digital Forensics System',
+    investigatorDetails: caseData.investigatorDetails,
   };
 }
 
@@ -94,6 +95,9 @@ export function generatePDF(report: ForensicReport): jsPDF {
   // Case details table
   const details = [
     ['Case ID:', report.caseId],
+    ['Case Number:', report.investigatorDetails.caseNumber],
+    ['Investigation ID:', report.investigatorDetails.investigationId],
+    ['Investigator:', report.investigatorDetails.investigatorName],
     ['Incident Type:', report.incidentType],
     ['Severity:', report.severity],
     ['Risk Score:', `${report.riskScore}/100`],
