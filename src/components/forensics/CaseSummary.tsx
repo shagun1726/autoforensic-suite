@@ -82,14 +82,14 @@ export function CaseSummary({ caseData }: CaseSummaryProps) {
 
         {/* Evidence Hash */}
         <motion.div
-          className="p-3 rounded-lg bg-accent/10 border border-accent/30"
+          className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
           <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 className="w-4 h-4 text-accent" />
-            <span className="text-sm font-semibold text-accent">Evidence Integrity Verified</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Evidence Integrity Verified</span>
           </div>
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">SHA-256 Hash</p>

@@ -408,7 +408,7 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
                         event.severity === 'critical' ? 'bg-destructive' :
                         event.severity === 'high' ? 'bg-warning' :
                         event.severity === 'medium' ? 'bg-yellow-400' :
-                        'bg-accent'
+                        'bg-emerald-500'
                       )} />
                     </div>
 
@@ -431,8 +431,8 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
                               sevConfig.bgColor,
                               event.severity === 'critical' ? 'text-destructive' :
                               event.severity === 'high' ? 'text-warning' :
-                              event.severity === 'medium' ? 'text-yellow-400' :
-                              'text-accent'
+                              event.severity === 'medium' ? 'text-yellow-600 dark:text-yellow-400' :
+                              'text-emerald-600 dark:text-emerald-400'
                             )}>
                               {event.severity}
                             </span>
