@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Clock, 
@@ -8,9 +9,12 @@ import {
   Trash2, 
   Server,
   HelpCircle,
-  Lock
+  Lock,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { TimelineEvent } from '@/lib/forensics/types';
 import { cn } from '@/lib/utils';
 
@@ -54,10 +58,13 @@ function formatDate(date: Date): string {
 }
 
 export function TimelineDisplay({ events }: TimelineDisplayProps) {
-  // Sort all events by timestamp first
-  const sortedEvents = [...events].sort(
-    (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
-  );
+  const [sortAscending, setSortAscending] = useState(true);
+
+  // Sort all events by timestamp
+  const sortedEvents = [...events].sort((a, b) => {
+    const diff = a.timestamp.getTime() - b.timestamp.getTime();
+    return sortAscending ? diff : -diff;
+  });
 
   // Group events by date
   const groupedEvents = sortedEvents.reduce((groups, event) => {
@@ -71,27 +78,49 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
 
   // Sort dates chronologically
   const sortedDates = Object.keys(groupedEvents).sort((a, b) => {
-    // Get the first event from each group to compare dates
     const dateA = groupedEvents[a][0]?.timestamp.getTime() || 0;
     const dateB = groupedEvents[b][0]?.timestamp.getTime() || 0;
-    return dateA - dateB;
+    return sortAscending ? dateA - dateB : dateB - dateA;
   });
 
   // Sort events within each date group by time
   for (const date of sortedDates) {
-    groupedEvents[date].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    groupedEvents[date].sort((a, b) => {
+      const diff = a.timestamp.getTime() - b.timestamp.getTime();
+      return sortAscending ? diff : -diff;
+    });
   }
 
   return (
     <Card variant="glass" className="overflow-hidden">
       <CardHeader className="border-b border-border/50">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Clock className="w-5 h-5 text-primary" />
-          Incident Timeline
-          <span className="text-sm font-normal text-muted-foreground ml-2">
-            ({events.length} events)
-          </span>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Clock className="w-5 h-5 text-primary" />
+            Incident Timeline
+            <span className="text-sm font-normal text-muted-foreground ml-2">
+              ({events.length} events)
+            </span>
+          </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSortAscending(!sortAscending)}
+            className="gap-2"
+          >
+            {sortAscending ? (
+              <>
+                <ArrowUp className="w-4 h-4" />
+                Oldest First
+              </>
+            ) : (
+              <>
+                <ArrowDown className="w-4 h-4" />
+                Newest First
+              </>
+            )}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="p-0 max-h-[400px] overflow-y-auto">
         {sortedDates.map((date, dateIndex) => (
