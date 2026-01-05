@@ -1,12 +1,17 @@
 import { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, AlertTriangle, Shield, X, User, Hash, FileSearch } from 'lucide-react';
+import { Upload, FileText, AlertTriangle, Shield, X, User, Hash, FileSearch, Files } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { InvestigatorDetails } from '@/lib/forensics/types';
+
+interface SelectedFile {
+  file: File;
+  content: string;
+}
 
 interface FileUploadProps {
   onFileSelect: (file: File, content: string, investigatorDetails: InvestigatorDetails) => void;
@@ -18,8 +23,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
   const [isDragActive, setIsDragActive] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileContent, setFileContent] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
   const [error, setError] = useState<string | null>(null);
   
   // Investigator details
@@ -31,46 +35,74 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
     const extension = '.' + file.name.split('.').pop()?.toLowerCase();
     
     if (!ALLOWED_EXTENSIONS.includes(extension)) {
-      return `Invalid file type. Allowed types: ${ALLOWED_EXTENSIONS.join(', ')}`;
+      return `Invalid file type: ${file.name}. Allowed types: ${ALLOWED_EXTENSIONS.join(', ')}`;
     }
     
     if (file.size > MAX_FILE_SIZE) {
-      return 'File size exceeds 10MB limit';
+      return `File ${file.name} exceeds 10MB limit`;
     }
     
     return null;
   };
 
-  const handleFile = useCallback(async (file: File) => {
-    const validationError = validateFile(file);
-    if (validationError) {
-      setError(validationError);
-      setSelectedFile(null);
-      return;
+  const handleFiles = useCallback(async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    const validFiles: SelectedFile[] = [];
+    const errors: string[] = [];
+
+    for (const file of fileArray) {
+      const validationError = validateFile(file);
+      if (validationError) {
+        errors.push(validationError);
+        continue;
+      }
+
+      try {
+        const content = await file.text();
+        validFiles.push({ file, content });
+      } catch {
+        errors.push(`Failed to read ${file.name}`);
+      }
     }
 
-    setError(null);
-    setSelectedFile(file);
+    if (errors.length > 0) {
+      setError(errors.join('; '));
+    } else {
+      setError(null);
+    }
 
-    try {
-      const content = await file.text();
-      setFileContent(content);
-    } catch {
-      setError('Failed to read file contents');
-      setSelectedFile(null);
-      setFileContent(null);
+    if (validFiles.length > 0) {
+      setSelectedFiles(prev => [...prev, ...validFiles]);
     }
   }, []);
 
   const handleStartAnalysis = () => {
-    if (!selectedFile || !fileContent) return;
+    if (selectedFiles.length === 0) return;
     
     if (!caseNumber.trim() || !investigatorName.trim() || !investigationId.trim()) {
       setError('Please fill in all investigator details');
       return;
     }
+
+    // Combine all file contents with file separators
+    const combinedContent = selectedFiles
+      .map(sf => `\n=== FILE: ${sf.file.name} ===\n${sf.content}`)
+      .join('\n');
     
-    onFileSelect(selectedFile, fileContent, {
+    // Create a virtual combined file
+    const totalSize = selectedFiles.reduce((sum, sf) => sum + sf.file.size, 0);
+    const combinedFile = new File(
+      [combinedContent], 
+      selectedFiles.length === 1 
+        ? selectedFiles[0].file.name 
+        : `combined_${selectedFiles.length}_files.log`,
+      { type: 'text/plain' }
+    );
+    
+    // Override size for display purposes
+    Object.defineProperty(combinedFile, 'size', { value: totalSize });
+    
+    onFileSelect(combinedFile, combinedContent, {
       caseNumber: caseNumber.trim(),
       investigatorName: investigatorName.trim(),
       investigationId: investigationId.trim(),
@@ -83,9 +115,9 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
 
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      handleFile(files[0]);
+      handleFiles(files);
     }
-  }, [handleFile]);
+  }, [handleFiles]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -100,17 +132,23 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleFile(files[0]);
+      handleFiles(files);
     }
-  }, [handleFile]);
+    // Reset input to allow selecting same file again
+    e.target.value = '';
+  }, [handleFiles]);
 
-  const clearFile = () => {
-    setSelectedFile(null);
-    setFileContent(null);
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     setError(null);
   };
 
-  const isFormValid = selectedFile && fileContent && caseNumber.trim() && investigatorName.trim() && investigationId.trim();
+  const clearAllFiles = () => {
+    setSelectedFiles([]);
+    setError(null);
+  };
+
+  const isFormValid = selectedFiles.length > 0 && caseNumber.trim() && investigatorName.trim() && investigationId.trim();
 
   return (
     <Card variant="cyber" className="p-1">
@@ -193,7 +231,8 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
           accept={ALLOWED_EXTENSIONS.join(',')}
           onChange={handleInputChange}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          disabled={isProcessing || !!selectedFile}
+          disabled={isProcessing}
+          multiple
         />
 
         <div className="flex flex-col items-center justify-center space-y-4">
@@ -224,54 +263,81 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
               {isProcessing 
                 ? "Analyzing Evidence..." 
                 : isDragActive 
-                  ? "Drop your log file here" 
+                  ? "Drop your log files here" 
                   : "Upload System Logs"}
             </h3>
             <p className="text-sm text-muted-foreground">
               {isProcessing 
                 ? "Running forensic analysis pipeline"
-                : "Drag and drop or click to browse"}
+                : "Drag and drop or click to browse (multiple files supported)"}
             </p>
             <p className="text-xs text-muted-foreground/70">
-              Supported: .txt, .log, .syslog, .csv (Max 10MB)
+              Supported: .txt, .log, .syslog, .csv (Max 10MB each)
             </p>
           </div>
 
-          {!isProcessing && !selectedFile && (
+          {!isProcessing && (
             <Button variant="outline" size="sm" className="mt-2 pointer-events-none">
-              <FileText className="w-4 h-4 mr-2" />
-              Select File
+              <Files className="w-4 h-4 mr-2" />
+              Select Files
             </Button>
           )}
         </div>
 
+        {/* Selected Files List */}
         <AnimatePresence>
-          {selectedFile && !error && (
+          {selectedFiles.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mt-4 p-3 rounded-md bg-accent/20 border border-accent/30 flex items-center justify-between"
+              className="mt-4 space-y-2"
             >
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-accent" />
-                <div>
-                  <p className="text-sm font-medium text-foreground">{selectedFile.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(selectedFile.size / 1024).toFixed(2)} KB
-                  </p>
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  {selectedFiles.length} file(s) selected
+                </span>
+                {!isProcessing && selectedFiles.length > 1 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); clearAllFiles(); }}
+                    className="h-6 text-xs relative z-10"
+                  >
+                    Clear all
+                  </Button>
+                )}
               </div>
-              {!isProcessing && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); clearFile(); }}
-                  className="h-8 w-8 relative z-10"
+              
+              {selectedFiles.map((sf, index) => (
+                <motion.div
+                  key={`${sf.file.name}-${index}`}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  className="p-2 rounded-md bg-accent/20 border border-accent/30 flex items-center justify-between"
                 >
-                  <X className="w-4 h-4" />
-                </Button>
-              )}
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-accent" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{sf.file.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(sf.file.size / 1024).toFixed(2)} KB
+                      </p>
+                    </div>
+                  </div>
+                  {!isProcessing && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeFile(index); }}
+                      className="h-6 w-6 relative z-10"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  )}
+                </motion.div>
+              ))}
             </motion.div>
           )}
         </AnimatePresence>
@@ -292,7 +358,7 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
       </motion.div>
 
       {/* Start Analysis Button */}
-      {selectedFile && fileContent && !isProcessing && (
+      {selectedFiles.length > 0 && !isProcessing && (
         <div className="p-4 pt-0 flex justify-center">
           <Button 
             onClick={handleStartAnalysis}
@@ -301,7 +367,7 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
             className="w-full sm:w-auto"
           >
             <Shield className="w-4 h-4 mr-2" />
-            Start Forensic Analysis
+            Analyze {selectedFiles.length} File{selectedFiles.length > 1 ? 's' : ''}
           </Button>
         </div>
       )}

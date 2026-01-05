@@ -48,26 +48,70 @@ function detectLevel(text: string): LogEntry['level'] {
 }
 
 function parseTimestamp(timestampStr: string): Date {
+  // Clean up the timestamp string
+  const cleaned = timestampStr.trim();
+  
   // Try various formats
   const formats = [
-    // ISO format
-    () => new Date(timestampStr),
+    // ISO format (e.g., "2024-01-15T10:30:00Z")
+    () => new Date(cleaned),
+    // Standard datetime (e.g., "2024-01-15 10:30:00")
+    () => new Date(cleaned.replace(/[-\/]/g, '-')),
     // Syslog format (e.g., "Jan 15 10:30:00")
     () => {
       const currentYear = new Date().getFullYear();
-      return new Date(`${timestampStr} ${currentYear}`);
+      return new Date(`${cleaned} ${currentYear}`);
     },
     // Apache format (e.g., "15/Jan/2024:10:30:00 +0000")
     () => {
-      const cleaned = timestampStr.replace(/(\d{2})\/(\w{3})\/(\d{4}):(\d{2}:\d{2}:\d{2})/, '$2 $1, $3 $4');
-      return new Date(cleaned);
+      const apacheMatch = cleaned.match(/(\d{2})\/(\w{3})\/(\d{4}):(\d{2}:\d{2}:\d{2})/);
+      if (apacheMatch) {
+        return new Date(`${apacheMatch[2]} ${apacheMatch[1]}, ${apacheMatch[3]} ${apacheMatch[4]}`);
+      }
+      throw new Error('Not Apache format');
+    },
+    // Unix timestamp (numeric)
+    () => {
+      const num = parseInt(cleaned);
+      if (!isNaN(num) && num > 946684800 && num < 2147483647) {
+        return new Date(num * 1000);
+      }
+      if (!isNaN(num) && num > 946684800000) {
+        return new Date(num);
+      }
+      throw new Error('Not unix timestamp');
+    },
+    // Various date formats with slashes or dashes
+    () => {
+      const dateMatch = cleaned.match(/(\d{1,4})[-\/](\d{1,2})[-\/](\d{1,4})[\sT]?(\d{2}:\d{2}:\d{2})?/);
+      if (dateMatch) {
+        let year = parseInt(dateMatch[1]);
+        let month = parseInt(dateMatch[2]) - 1;
+        let day = parseInt(dateMatch[3]);
+        
+        // Handle DD/MM/YYYY vs YYYY/MM/DD
+        if (year < 100) {
+          year = year + 2000;
+        }
+        if (dateMatch[1].length <= 2 && dateMatch[3].length === 4) {
+          // DD/MM/YYYY format
+          day = parseInt(dateMatch[1]);
+          year = parseInt(dateMatch[3]);
+        }
+        
+        const timeStr = dateMatch[4] || '00:00:00';
+        const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+        
+        return new Date(year, month, day, hours || 0, minutes || 0, seconds || 0);
+      }
+      throw new Error('Not date format');
     },
   ];
 
   for (const parser of formats) {
     try {
       const date = parser();
-      if (!isNaN(date.getTime())) {
+      if (date && !isNaN(date.getTime()) && date.getTime() > 0) {
         return date;
       }
     } catch {
@@ -75,7 +119,8 @@ function parseTimestamp(timestampStr: string): Date {
     }
   }
 
-  return new Date();
+  // Return epoch + line number hash if nothing works (to maintain relative order)
+  return new Date(0);
 }
 
 function detectSource(line: string): string {
