@@ -11,7 +11,8 @@ import {
   HelpCircle,
   Lock,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Filter
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,12 +34,14 @@ const eventTypeConfig: Record<TimelineEvent['type'], { icon: React.ElementType; 
   unknown: { icon: HelpCircle, color: 'text-muted-foreground' },
 };
 
-const severityConfig: Record<TimelineEvent['severity'], { color: string; bgColor: string }> = {
-  critical: { color: 'border-destructive', bgColor: 'bg-destructive/20' },
-  high: { color: 'border-warning', bgColor: 'bg-warning/20' },
-  medium: { color: 'border-yellow-400', bgColor: 'bg-yellow-400/20' },
-  low: { color: 'border-accent', bgColor: 'bg-accent/20' },
+const severityConfig: Record<TimelineEvent['severity'], { color: string; bgColor: string; textColor: string }> = {
+  critical: { color: 'border-destructive', bgColor: 'bg-destructive/20', textColor: 'text-destructive' },
+  high: { color: 'border-warning', bgColor: 'bg-warning/20', textColor: 'text-warning' },
+  medium: { color: 'border-yellow-400', bgColor: 'bg-yellow-400/20', textColor: 'text-yellow-400' },
+  low: { color: 'border-accent', bgColor: 'bg-accent/20', textColor: 'text-accent' },
 };
+
+const severityLevels: TimelineEvent['severity'][] = ['critical', 'high', 'medium', 'low'];
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString('en-US', {
@@ -59,9 +62,34 @@ function formatDate(date: Date): string {
 
 export function TimelineDisplay({ events }: TimelineDisplayProps) {
   const [sortAscending, setSortAscending] = useState(true);
+  const [activeSeverities, setActiveSeverities] = useState<Set<TimelineEvent['severity']>>(
+    new Set(severityLevels)
+  );
 
-  // Sort all events by timestamp
-  const sortedEvents = [...events].sort((a, b) => {
+  const toggleSeverity = (severity: TimelineEvent['severity']) => {
+    setActiveSeverities(prev => {
+      const next = new Set(prev);
+      if (next.has(severity)) {
+        // Don't allow deselecting all
+        if (next.size > 1) {
+          next.delete(severity);
+        }
+      } else {
+        next.add(severity);
+      }
+      return next;
+    });
+  };
+
+  const selectAllSeverities = () => {
+    setActiveSeverities(new Set(severityLevels));
+  };
+
+  // Filter events by severity
+  const filteredEvents = events.filter(event => activeSeverities.has(event.severity));
+
+  // Sort filtered events by timestamp
+  const sortedEvents = [...filteredEvents].sort((a, b) => {
     const diff = a.timestamp.getTime() - b.timestamp.getTime();
     return sortAscending ? diff : -diff;
   });
@@ -91,15 +119,21 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
     });
   }
 
+  // Count events by severity
+  const severityCounts = events.reduce((counts, event) => {
+    counts[event.severity] = (counts[event.severity] || 0) + 1;
+    return counts;
+  }, {} as Record<string, number>);
+
   return (
     <Card variant="glass" className="overflow-hidden">
-      <CardHeader className="border-b border-border/50">
+      <CardHeader className="border-b border-border/50 space-y-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Clock className="w-5 h-5 text-primary" />
             Incident Timeline
             <span className="text-sm font-normal text-muted-foreground ml-2">
-              ({events.length} events)
+              ({filteredEvents.length} of {events.length} events)
             </span>
           </CardTitle>
           <Button
@@ -120,6 +154,42 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
               </>
             )}
           </Button>
+        </div>
+        
+        {/* Severity Filter */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Filter className="w-3 h-3" />
+            <span>Filter:</span>
+          </div>
+          {severityLevels.map(severity => {
+            const config = severityConfig[severity];
+            const count = severityCounts[severity] || 0;
+            const isActive = activeSeverities.has(severity);
+            
+            return (
+              <button
+                key={severity}
+                onClick={() => toggleSeverity(severity)}
+                className={cn(
+                  "px-2 py-1 rounded text-xs font-semibold uppercase transition-all border",
+                  isActive 
+                    ? cn(config.bgColor, config.color, config.textColor)
+                    : "bg-secondary/50 border-border/50 text-muted-foreground opacity-50"
+                )}
+              >
+                {severity} ({count})
+              </button>
+            );
+          })}
+          {activeSeverities.size < severityLevels.length && (
+            <button
+              onClick={selectAllSeverities}
+              className="px-2 py-1 rounded text-xs text-primary hover:text-primary/80 underline"
+            >
+              Show All
+            </button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="p-0 max-h-[400px] overflow-y-auto">
