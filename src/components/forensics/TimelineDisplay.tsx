@@ -42,6 +42,7 @@ const severityConfig: Record<TimelineEvent['severity'], { color: string; bgColor
 };
 
 const severityLevels: TimelineEvent['severity'][] = ['critical', 'high', 'medium', 'low'];
+const eventTypes: TimelineEvent['type'][] = ['authentication', 'security', 'access', 'network', 'modification', 'deletion', 'system', 'unknown'];
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString('en-US', {
@@ -65,12 +66,14 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
   const [activeSeverities, setActiveSeverities] = useState<Set<TimelineEvent['severity']>>(
     new Set(severityLevels)
   );
+  const [activeTypes, setActiveTypes] = useState<Set<TimelineEvent['type']>>(
+    new Set(eventTypes)
+  );
 
   const toggleSeverity = (severity: TimelineEvent['severity']) => {
     setActiveSeverities(prev => {
       const next = new Set(prev);
       if (next.has(severity)) {
-        // Don't allow deselecting all
         if (next.size > 1) {
           next.delete(severity);
         }
@@ -85,8 +88,28 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
     setActiveSeverities(new Set(severityLevels));
   };
 
-  // Filter events by severity
-  const filteredEvents = events.filter(event => activeSeverities.has(event.severity));
+  const toggleType = (type: TimelineEvent['type']) => {
+    setActiveTypes(prev => {
+      const next = new Set(prev);
+      if (next.has(type)) {
+        if (next.size > 1) {
+          next.delete(type);
+        }
+      } else {
+        next.add(type);
+      }
+      return next;
+    });
+  };
+
+  const selectAllTypes = () => {
+    setActiveTypes(new Set(eventTypes));
+  };
+
+  // Filter events by severity and type
+  const filteredEvents = events.filter(
+    event => activeSeverities.has(event.severity) && activeTypes.has(event.type)
+  );
 
   // Sort filtered events by timestamp
   const sortedEvents = [...filteredEvents].sort((a, b) => {
@@ -125,6 +148,12 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
     return counts;
   }, {} as Record<string, number>);
 
+  // Count events by type
+  const typeCounts = events.reduce((counts, event) => {
+    counts[event.type] = (counts[event.type] || 0) + 1;
+    return counts;
+  }, {} as Record<string, number>);
+
   return (
     <Card variant="glass" className="overflow-hidden">
       <CardHeader className="border-b border-border/50 space-y-3">
@@ -160,7 +189,7 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Filter className="w-3 h-3" />
-            <span>Filter:</span>
+            <span>Severity:</span>
           </div>
           {severityLevels.map(severity => {
             const config = severityConfig[severity];
@@ -187,7 +216,47 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
               onClick={selectAllSeverities}
               className="px-2 py-1 rounded text-xs text-primary hover:text-primary/80 underline"
             >
-              Show All
+              All
+            </button>
+          )}
+        </div>
+
+        {/* Event Type Filter */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Filter className="w-3 h-3" />
+            <span>Type:</span>
+          </div>
+          {eventTypes.map(type => {
+            const config = eventTypeConfig[type];
+            const count = typeCounts[type] || 0;
+            const isActive = activeTypes.has(type);
+            const Icon = config.icon;
+            
+            if (count === 0) return null;
+            
+            return (
+              <button
+                key={type}
+                onClick={() => toggleType(type)}
+                className={cn(
+                  "px-2 py-1 rounded text-xs font-medium capitalize transition-all border flex items-center gap-1",
+                  isActive 
+                    ? cn("bg-secondary border-border", config.color)
+                    : "bg-secondary/50 border-border/50 text-muted-foreground opacity-50"
+                )}
+              >
+                <Icon className="w-3 h-3" />
+                {type} ({count})
+              </button>
+            );
+          })}
+          {activeTypes.size < eventTypes.length && (
+            <button
+              onClick={selectAllTypes}
+              className="px-2 py-1 rounded text-xs text-primary hover:text-primary/80 underline"
+            >
+              All
             </button>
           )}
         </div>
