@@ -8,7 +8,13 @@ import {
   ShieldAlert,
   FileWarning,
   Activity,
-  HelpCircle
+  HelpCircle,
+  UserX,
+  Radio,
+  Move3D,
+  Skull,
+  FileX2,
+  Database
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { IncidentClassification, IncidentType } from '@/lib/forensics/types';
@@ -22,12 +28,19 @@ interface IncidentTypeDisplayProps {
 const incidentConfig: Record<IncidentType, { icon: React.ElementType; color: string; bgColor: string }> = {
   UNAUTHORIZED_ACCESS: { icon: Key, color: 'text-orange-400', bgColor: 'bg-orange-400/20' },
   DATA_BREACH: { icon: AlertOctagon, color: 'text-destructive', bgColor: 'bg-destructive/20' },
+  DATA_EXFILTRATION: { icon: Database, color: 'text-red-500', bgColor: 'bg-red-500/20' },
   MALWARE_INFECTION: { icon: Bug, color: 'text-purple-400', bgColor: 'bg-purple-400/20' },
+  RANSOMWARE: { icon: Skull, color: 'text-red-600', bgColor: 'bg-red-600/20' },
   DENIAL_OF_SERVICE: { icon: Wifi, color: 'text-red-500', bgColor: 'bg-red-500/20' },
   PRIVILEGE_ESCALATION: { icon: ShieldAlert, color: 'text-yellow-400', bgColor: 'bg-yellow-400/20' },
   SUSPICIOUS_ACTIVITY: { icon: Activity, color: 'text-warning', bgColor: 'bg-warning/20' },
   POLICY_VIOLATION: { icon: FileWarning, color: 'text-blue-400', bgColor: 'bg-blue-400/20' },
   SYSTEM_COMPROMISE: { icon: AlertOctagon, color: 'text-destructive', bgColor: 'bg-destructive/20' },
+  CREDENTIAL_COMPROMISE: { icon: Key, color: 'text-amber-500', bgColor: 'bg-amber-500/20' },
+  INSIDER_THREAT: { icon: UserX, color: 'text-rose-500', bgColor: 'bg-rose-500/20' },
+  ANTI_FORENSICS: { icon: FileX2, color: 'text-red-600', bgColor: 'bg-red-600/20' },
+  LATERAL_MOVEMENT: { icon: Move3D, color: 'text-orange-500', bgColor: 'bg-orange-500/20' },
+  C2_COMMUNICATION: { icon: Radio, color: 'text-red-600', bgColor: 'bg-red-600/20' },
   UNKNOWN: { icon: HelpCircle, color: 'text-muted-foreground', bgColor: 'bg-muted/20' },
 };
 

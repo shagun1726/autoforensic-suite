@@ -186,12 +186,19 @@ export function getIncidentTypeLabel(type: IncidentType): string {
   const labels: Record<IncidentType, string> = {
     UNAUTHORIZED_ACCESS: 'Unauthorized Access Attempt',
     DATA_BREACH: 'Data Breach / Exfiltration',
+    DATA_EXFILTRATION: 'Data Exfiltration',
     MALWARE_INFECTION: 'Malware Infection',
+    RANSOMWARE: 'Ransomware Attack',
     DENIAL_OF_SERVICE: 'Denial of Service Attack',
     PRIVILEGE_ESCALATION: 'Privilege Escalation',
     SUSPICIOUS_ACTIVITY: 'Suspicious Activity',
     POLICY_VIOLATION: 'Policy Violation',
     SYSTEM_COMPROMISE: 'System Compromise',
+    CREDENTIAL_COMPROMISE: 'Credential Compromise',
+    INSIDER_THREAT: 'Insider Threat',
+    ANTI_FORENSICS: 'Anti-Forensics Activity',
+    LATERAL_MOVEMENT: 'Lateral Movement',
+    C2_COMMUNICATION: 'C2 Communication',
     UNKNOWN: 'Unknown Incident Type',
   };
   return labels[type] || type;
