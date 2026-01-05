@@ -10,6 +10,7 @@ import { ObservationsDisplay } from '@/components/forensics/ObservationsDisplay'
 import { ForensicCase, InvestigatorDetails } from '@/lib/forensics/types';
 import { createForensicCase } from '@/lib/forensics/caseManager';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const Index = () => {
   const [forensicCase, setForensicCase] = useState<ForensicCase | null>(null);
@@ -77,22 +78,25 @@ const Index = () => {
               </div>
             </motion.div>
 
-            {forensicCase && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-              >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNewAnalysis}
-                  className="gap-2"
+            <div className="flex items-center gap-3">
+              {forensicCase && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
                 >
-                  <Sparkles className="w-4 h-4" />
-                  New Analysis
-                </Button>
-              </motion.div>
-            )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNewAnalysis}
+                    className="gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    New Analysis
+                  </Button>
+                </motion.div>
+              )}
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </header>
