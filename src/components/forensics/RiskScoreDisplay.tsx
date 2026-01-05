@@ -47,10 +47,10 @@ export function RiskScoreDisplay({ risk }: RiskScoreDisplayProps) {
       case 'LOW':
         return {
           icon: CheckCircle2,
-          color: 'text-accent',
-          bgColor: 'bg-accent/20',
-          borderColor: 'border-accent/50',
-          glowColor: 'shadow-[0_0_30px_hsl(var(--accent)/0.4)]',
+          color: 'text-emerald-600 dark:text-emerald-400',
+          bgColor: 'bg-emerald-500/20',
+          borderColor: 'border-emerald-500/50',
+          glowColor: 'shadow-[0_0_30px_hsl(160_70%_45%/0.4)]',
           label: 'Low Risk',
         };
     }
