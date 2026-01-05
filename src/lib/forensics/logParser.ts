@@ -160,7 +160,7 @@ export function parseLogFile(content: string): LogEntry[] {
     const line = lines[i].trim();
     if (!line) continue;
 
-    let timestamp = new Date();
+    let timestamp: Date | null = null;
     let level: LogEntry['level'] = 'INFO';
     let message = line;
     let source = 'system';
@@ -178,14 +178,35 @@ export function parseLogFile(content: string): LogEntry[] {
     }
 
     // Fallback: try to extract any timestamp-like pattern
-    if (message === line) {
-      const timestampMatch = line.match(/\d{4}[-\/]\d{2}[-\/]\d{2}[\sT]\d{2}:\d{2}:\d{2}/);
-      if (timestampMatch) {
-        timestamp = new Date(timestampMatch[0]);
-        message = line.replace(timestampMatch[0], '').trim();
+    if (!timestamp || timestamp.getTime() === 0) {
+      // Try multiple timestamp patterns
+      const timestampPatterns = [
+        /(\d{4}[-\/]\d{2}[-\/]\d{2}[\sT]\d{2}:\d{2}:\d{2})/,
+        /(\d{2}[-\/]\d{2}[-\/]\d{4}[\sT]\d{2}:\d{2}:\d{2})/,
+        /(\d{2}:\d{2}:\d{2})/,
+        /(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})/,
+      ];
+      
+      for (const pattern of timestampPatterns) {
+        const timestampMatch = line.match(pattern);
+        if (timestampMatch) {
+          const parsed = parseTimestamp(timestampMatch[1]);
+          if (parsed.getTime() !== 0) {
+            timestamp = parsed;
+            message = line.replace(timestampMatch[0], '').trim();
+            break;
+          }
+        }
       }
+      
       level = detectLevel(line);
       source = detectSource(line);
+    }
+
+    // If still no valid timestamp, use line number to create relative ordering
+    if (!timestamp || timestamp.getTime() === 0) {
+      // Use a base date + line number to maintain order for logs without timestamps
+      timestamp = new Date(2024, 0, 1, 0, 0, i);
     }
 
     entries.push({
@@ -198,5 +219,6 @@ export function parseLogFile(content: string): LogEntry[] {
     });
   }
 
+  // Sort by timestamp
   return entries.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 }
