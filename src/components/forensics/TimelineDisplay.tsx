@@ -54,8 +54,13 @@ function formatDate(date: Date): string {
 }
 
 export function TimelineDisplay({ events }: TimelineDisplayProps) {
+  // Sort all events by timestamp first
+  const sortedEvents = [...events].sort(
+    (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+  );
+
   // Group events by date
-  const groupedEvents = events.reduce((groups, event) => {
+  const groupedEvents = sortedEvents.reduce((groups, event) => {
     const dateKey = formatDate(event.timestamp);
     if (!groups[dateKey]) {
       groups[dateKey] = [];
@@ -64,9 +69,18 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
     return groups;
   }, {} as Record<string, TimelineEvent[]>);
 
-  const sortedDates = Object.keys(groupedEvents).sort(
-    (a, b) => new Date(a).getTime() - new Date(b).getTime()
-  );
+  // Sort dates chronologically
+  const sortedDates = Object.keys(groupedEvents).sort((a, b) => {
+    // Get the first event from each group to compare dates
+    const dateA = groupedEvents[a][0]?.timestamp.getTime() || 0;
+    const dateB = groupedEvents[b][0]?.timestamp.getTime() || 0;
+    return dateA - dateB;
+  });
+
+  // Sort events within each date group by time
+  for (const date of sortedDates) {
+    groupedEvents[date].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  }
 
   return (
     <Card variant="glass" className="overflow-hidden">
