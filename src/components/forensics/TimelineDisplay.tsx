@@ -12,10 +12,13 @@ import {
   Lock,
   ArrowUp,
   ArrowDown,
-  Filter
+  Filter,
+  Search,
+  X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { TimelineEvent } from '@/lib/forensics/types';
 import { cn } from '@/lib/utils';
 
@@ -69,6 +72,7 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
   const [activeTypes, setActiveTypes] = useState<Set<TimelineEvent['type']>>(
     new Set(eventTypes)
   );
+  const [searchQuery, setSearchQuery] = useState('');
 
   const toggleSeverity = (severity: TimelineEvent['severity']) => {
     setActiveSeverities(prev => {
@@ -106,10 +110,24 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
     setActiveTypes(new Set(eventTypes));
   };
 
-  // Filter events by severity and type
-  const filteredEvents = events.filter(
-    event => activeSeverities.has(event.severity) && activeTypes.has(event.type)
-  );
+  // Filter events by severity, type, and search query
+  const filteredEvents = events.filter(event => {
+    if (!activeSeverities.has(event.severity)) return false;
+    if (!activeTypes.has(event.type)) return false;
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const matchesDescription = event.description.toLowerCase().includes(query);
+      const matchesSource = event.source.toLowerCase().includes(query);
+      const matchesDetails = event.details 
+        ? Object.values(event.details).some(v => v.toLowerCase().includes(query))
+        : false;
+      
+      if (!matchesDescription && !matchesSource && !matchesDetails) return false;
+    }
+    
+    return true;
+  });
 
   // Sort filtered events by timestamp
   const sortedEvents = [...filteredEvents].sort((a, b) => {
@@ -257,6 +275,26 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
               className="px-2 py-1 rounded text-xs text-primary hover:text-primary/80 underline"
             >
               All
+            </button>
+          )}
+        </div>
+
+        {/* Search Filter */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search events by description, source, or details..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9 h-9 bg-secondary/50 border-border/50"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>
