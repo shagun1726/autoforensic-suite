@@ -7,7 +7,7 @@ import { RiskScoreDisplay } from '@/components/forensics/RiskScoreDisplay';
 import { TimelineDisplay } from '@/components/forensics/TimelineDisplay';
 import { IncidentTypeDisplay } from '@/components/forensics/IncidentTypeDisplay';
 import { ObservationsDisplay } from '@/components/forensics/ObservationsDisplay';
-import { ForensicCase } from '@/lib/forensics/types';
+import { ForensicCase, InvestigatorDetails } from '@/lib/forensics/types';
 import { createForensicCase } from '@/lib/forensics/caseManager';
 
 const Index = () => {
@@ -15,7 +15,7 @@ const Index = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState<string>('');
 
-  const handleFileSelect = useCallback(async (file: File, content: string) => {
+  const handleFileSelect = useCallback(async (file: File, content: string, investigatorDetails: InvestigatorDetails) => {
     setIsProcessing(true);
     setForensicCase(null);
 
@@ -35,7 +35,7 @@ const Index = () => {
     }
 
     try {
-      const caseData = await createForensicCase(file, content);
+      const caseData = await createForensicCase(file, content, investigatorDetails);
       setForensicCase(caseData);
     } catch (error) {
       console.error('Analysis failed:', error);

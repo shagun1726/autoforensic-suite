@@ -49,6 +49,12 @@ export type IncidentType =
   | 'SYSTEM_COMPROMISE'
   | 'UNKNOWN';
 
+export interface InvestigatorDetails {
+  caseNumber: string;
+  investigatorName: string;
+  investigationId: string;
+}
+
 export interface ForensicCase {
   id: string;
   createdAt: Date;
@@ -62,6 +68,7 @@ export interface ForensicCase {
   incidentClassification: IncidentClassification;
   observations: string[];
   conclusion: string;
+  investigatorDetails: InvestigatorDetails;
 }
 
 export interface ForensicReport {
@@ -77,4 +84,5 @@ export interface ForensicReport {
   observations: string[];
   conclusion: string;
   generatedBy: string;
+  investigatorDetails: InvestigatorDetails;
 }
