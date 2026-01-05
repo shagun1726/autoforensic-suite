@@ -14,7 +14,10 @@ import {
   ArrowDown,
   Filter,
   Search,
-  X
+  X,
+  Download,
+  FileJson,
+  FileSpreadsheet
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -110,6 +113,52 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
     setActiveTypes(new Set(eventTypes));
   };
 
+  const exportToJSON = () => {
+    const exportData = sortedEvents.map(event => ({
+      id: event.id,
+      timestamp: event.timestamp.toISOString(),
+      type: event.type,
+      severity: event.severity,
+      description: event.description,
+      source: event.source,
+      details: event.details || {}
+    }));
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `timeline-events-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToCSV = () => {
+    const headers = ['ID', 'Timestamp', 'Type', 'Severity', 'Description', 'Source', 'Details'];
+    const rows = sortedEvents.map(event => [
+      event.id,
+      event.timestamp.toISOString(),
+      event.type,
+      event.severity,
+      `"${event.description.replace(/"/g, '""')}"`,
+      event.source,
+      event.details ? `"${JSON.stringify(event.details).replace(/"/g, '""')}"` : ''
+    ]);
+    
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `timeline-events-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // Filter events by severity, type, and search query
   const filteredEvents = events.filter(event => {
     if (!activeSeverities.has(event.severity)) return false;
@@ -183,24 +232,48 @@ export function TimelineDisplay({ events }: TimelineDisplayProps) {
               ({filteredEvents.length} of {events.length} events)
             </span>
           </CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSortAscending(!sortAscending)}
-            className="gap-2"
-          >
-            {sortAscending ? (
+          <div className="flex items-center gap-2">
+            {filteredEvents.length > 0 && (
               <>
-                <ArrowUp className="w-4 h-4" />
-                Oldest First
-              </>
-            ) : (
-              <>
-                <ArrowDown className="w-4 h-4" />
-                Newest First
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportToCSV}
+                  className="gap-1.5"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportToJSON}
+                  className="gap-1.5"
+                >
+                  <FileJson className="w-4 h-4" />
+                  JSON
+                </Button>
               </>
             )}
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSortAscending(!sortAscending)}
+              className="gap-2"
+            >
+              {sortAscending ? (
+                <>
+                  <ArrowUp className="w-4 h-4" />
+                  Oldest First
+                </>
+              ) : (
+                <>
+                  <ArrowDown className="w-4 h-4" />
+                  Newest First
+                </>
+              )}
+            </Button>
+          </div>
         </div>
         
         {/* Severity Filter */}
