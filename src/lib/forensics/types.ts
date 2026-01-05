@@ -41,12 +41,19 @@ export interface IncidentClassification {
 export type IncidentType = 
   | 'UNAUTHORIZED_ACCESS'
   | 'DATA_BREACH'
+  | 'DATA_EXFILTRATION'
   | 'MALWARE_INFECTION'
+  | 'RANSOMWARE'
   | 'DENIAL_OF_SERVICE'
   | 'PRIVILEGE_ESCALATION'
   | 'SUSPICIOUS_ACTIVITY'
   | 'POLICY_VIOLATION'
   | 'SYSTEM_COMPROMISE'
+  | 'CREDENTIAL_COMPROMISE'
+  | 'INSIDER_THREAT'
+  | 'ANTI_FORENSICS'
+  | 'LATERAL_MOVEMENT'
+  | 'C2_COMMUNICATION'
   | 'UNKNOWN';
 
 export interface InvestigatorDetails {
