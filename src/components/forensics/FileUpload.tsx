@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, AlertTriangle, Shield, X, User, Hash, FileSearch, Files } from 'lucide-react';
+import { Upload, FileText, AlertTriangle, Shield, X, User, Hash, FileSearch, Files, FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -148,6 +148,22 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
     setError(null);
   };
 
+  const loadDemoLog = async () => {
+    try {
+      setError(null);
+      const response = await fetch('/demo-logs/security-incident-sample.log');
+      if (!response.ok) throw new Error('Failed to load demo log');
+      const content = await response.text();
+      const demoFile = new File([content], 'security-incident-sample.log', { type: 'text/plain' });
+      setSelectedFiles([{ file: demoFile, content }]);
+      setCaseNumber('DEMO-2024-001');
+      setInvestigatorName('Demo Analyst');
+      setInvestigationId('INV-DEMO-001');
+    } catch {
+      setError('Failed to load demo log file');
+    }
+  };
+
   const isFormValid = selectedFiles.length > 0 && caseNumber.trim() && investigatorName.trim() && investigationId.trim();
 
   return (
@@ -277,10 +293,22 @@ export function FileUpload({ onFileSelect, isProcessing }: FileUploadProps) {
           </div>
 
           {!isProcessing && (
-            <Button variant="outline" size="sm" className="mt-2 pointer-events-none">
-              <Files className="w-4 h-4 mr-2" />
-              Select Files
-            </Button>
+            <div className="flex items-center gap-3 mt-2">
+              <Button variant="outline" size="sm" className="pointer-events-none">
+                <Files className="w-4 h-4 mr-2" />
+                Select Files
+              </Button>
+              <span className="text-xs text-muted-foreground">or</span>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); loadDemoLog(); }}
+                className="relative z-10"
+              >
+                <FlaskConical className="w-4 h-4 mr-2" />
+                Load Demo
+              </Button>
+            </div>
           )}
         </div>
 
